@@ -242,5 +242,90 @@ public class HttpUtilService {
             }
         }
     }
+
+    /**
+     * Makes an HTTP GET call to download a PDF file.
+     *
+     * @param url         The target URL with query parameters if any
+     * @param authToken   The Authorization token
+     * @return the PDF content as byte[]
+     * @throws Exception if the call fails
+     */
+    public byte[] getPdf(String url, String authToken) throws Exception {
+        HttpGet httpGet = new HttpGet(url);
+
+        // set authorization header
+        httpGet.addHeader("Authorization", "Bearer " + authToken);
+        httpGet.addHeader("Accept", "application/pdf");
+
+        // log the GET
+        log.info("HTTP GET Request to URL: {}", url);
+
+        CloseableHttpResponse response = null;
+        try {
+            response = httpClient.execute(httpGet);
+            int statusCode = response.getCode();
+
+            InputStream inputStream = response.getEntity().getContent();
+            byte[] pdfBytes = org.apache.commons.io.IOUtils.toByteArray(inputStream);
+
+            log.info("HTTP Response Status: {}", statusCode);
+            log.info("PDF Content Length: {} bytes", pdfBytes.length);
+
+            return pdfBytes;
+        } finally {
+            if (response != null) {
+                response.close();
+            }
+        }
+    }
+
 }
+```
+
+## Example Usage
+
+```java
+@GetMapping("/download")
+public ResponseEntity<byte[]> downloadPdf() throws Exception {
+    String url = "https://my-remote-service/api/documents/1234";
+    byte[] pdfBytes = httpUtilService.getPdf(url, "my-auth-token");
+
+    return ResponseEntity
+            .ok()
+            .header("Content-Disposition", "attachment; filename=document.pdf")
+            .contentType(MediaType.APPLICATION_PDF)
+            .body(pdfBytes);
+}
+
+@GetMapping("/download")
+public ResponseEntity<String> downloadAndSavePdf() throws Exception {
+    String url = "https://my-remote-service/api/documents/1234";
+    byte[] pdfBytes = httpUtilService.getPdf(url, "my-auth-token");
+
+    // Save to disk
+    String filePath = "/tmp/downloaded_document.pdf";
+    FileOutputStream fos = null;
+    try {
+        fos = new FileOutputStream(filePath);
+        fos.write(pdfBytes);
+    } finally {
+        if (fos != null) {
+            fos.close();
+        }
+    }
+
+    return ResponseEntity.ok("Saved to: " + filePath);
+}
+
+```
+
+2. Add following to pom.xml
+3.
+```xml
+<dependency>
+    <groupId>commons-io</groupId>
+    <artifactId>commons-io</artifactId>
+    <version>2.11.0</version>
+</dependency>
 ```
